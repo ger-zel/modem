@@ -59,9 +59,9 @@ def downsample(x ,k):
     i = 0
     new_len = len(x) / k
     for j in range(new_len):
-        i = i + k
-        out.append(x[i])
         # i = i + k
+        out.append(x[i])
+        i = i + k
     return out
 
 class raised_cosine():
@@ -117,22 +117,22 @@ def show_spectrum(signal):
     
     pylab.show()    
 
-def modulate(x, Fcarr, Fsampl):
+def modulate(x, Fcarr, Fsampl, K):
     qam = mapper_qam4()
     f = raised_cosine(n = 512)
     signal = qam.map_array(x)
-    show_spectrum(signal)
-    signal = upsample(signal, 16)
-    show_spectrum(signal)
+    # show_spectrum(signal)
+    signal = upsample(signal, K)
+    # show_spectrum(signal)
     # plt.plot(signal)
     signal = f.apply_filter(signal)
-    show_spectrum(signal)
+    # show_spectrum(signal)
     # plt.plot(signal)
     signal = modulate_to_real(signal, Fcarr, Fsampl)
-    show_spectrum(signal)
+    # show_spectrum(signal)
     return signal
 
-def demodulate(signal, Fcarr, Fsampl):
+def demodulate(signal, Fcarr, Fsampl, K):
     f = raised_cosine(n = 512)
 
     I = demod_from_real_to_I(signal, Fcarr, Fsampl)
@@ -142,18 +142,40 @@ def demodulate(signal, Fcarr, Fsampl):
     S = numpy.vectorize(complex)(I, Q)
     # plt.plot(S)
     # plt.show()
-    show_spectrum(S)
+    # show_spectrum(S)
     # S = S[512:]
-    S = downsample(S, 16)
-    show_spectrum(S)
+    S = downsample(S, K)
+    # show_spectrum(S)
     data = slice_signal(S)
     return data
+
+def list_find(what, where):
+    if not what: # empty list is always found
+        return 0
+    try:
+        index = 0
+        while True:
+            index = where.index(what[0], index)
+            if where[index:index+len(what)] == what:
+                return index # found
+            index += 1 # try next position
+    except ValueError:
+        return -1 # not found
+
+def contains(what, where):
+    i = list_find(what, where)
+    return [i, i + len(what)] if i >= 0 else [] #NOTE: bool([]) == False
 
 if __name__ == '__main__':
     x = rand_gen(1024)
     Fcarr = 2000
     Fsampl = 8000
-    signal = modulate(x, Fcarr, Fsampl)
-    y = demodulate(signal, Fcarr, Fsampl)
-    print x
-    print y
+    K = 12
+    signal = modulate(x, Fcarr, Fsampl, K)
+    y = demodulate(signal, Fcarr, Fsampl, K)
+    x = x.tolist()
+
+    if bool(contains(x, y)) == False:
+        print "data error"
+    else:
+        print "data ok"
