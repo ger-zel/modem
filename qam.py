@@ -3,13 +3,8 @@ import matplotlib.pyplot as plt
 import random
 import numpy
 import pylab
-
-def rand_gen(n, low=0, high=3):
-    x = numpy.zeros(n/2, dtype = 'uint8')
-    for i in range(n/2):
-        x[i] = random.randint(low,high)
-        # x[i] = 0
-    return x
+import filter
+import utils
 
 class mapper_qam4:
     def __init__(self):
@@ -64,26 +59,6 @@ def downsample(x ,k):
         i = i + k
     return out
 
-class raised_cosine():
-    def __init__(self, n = 16, betta = 0.5):
-        x = numpy.linspace(-20, 20, n)
-        sinc = numpy.sinc(x)
-        self.h = numpy.zeros(n)
-        for i in range(n-1):
-            self.h[i] = sinc[i] \
-                * math.cos(math.pi * betta * i / n) \
-                * 1 / (1 - 4 * pow(betta, 2) * pow(i, 2) / pow(n, 2))
-    def apply_filter_complex(self, signal):
-        i = numpy.real(signal)
-        q = numpy.imag(signal)
-        out_i = numpy.convolve(i, self.h)
-        out_q = numpy.convolve(q, self.h)
-        out = numpy.vectorize(complex)(out_i, out_q)
-        return out
-    def apply_filter(self, signal):
-        out = numpy.convolve(signal, self.h)
-        return out
-
 def modulate_to_real(signal, Fc, Fs):
     out = []
     for i in range(len(signal) - 1):
@@ -106,68 +81,35 @@ def demod_from_real_to_Q(signal, Fc, Fs):
         out.append(s)
     return out
 
-def show_spectrum(signal):
-    Pxx, freqs, t, plot = pylab.specgram(
-        signal,
-        NFFT=128, 
-        Fs=8000, 
-        detrend=pylab.detrend_none,
-        window=pylab.window_hanning,
-        noverlap=int(128 * 0.5))
-    
-    pylab.show()    
-
 def modulate(x, Fcarr, Fsampl, K):
     qam = mapper_qam4()
-    f = raised_cosine(n = 512)
+    f = filter.raised_cosine(n = 512)
     signal = qam.map_array(x)
-    # show_spectrum(signal)
+    utils.show_spectrum(signal)
     signal = upsample(signal, K)
-    # show_spectrum(signal)
-    # plt.plot(signal)
-    signal = f.apply_filter(signal)
-    # show_spectrum(signal)
-    # plt.plot(signal)
+    utils.show_spectrum(signal)
+    signal = f.apply_complex(signal)
+    utils.show_spectrum(signal)
     signal = modulate_to_real(signal, Fcarr, Fsampl)
-    # show_spectrum(signal)
+    utils.show_spectrum(signal)
     return signal
 
 def demodulate(signal, Fcarr, Fsampl, K):
-    f = raised_cosine(n = 512)
+    f = filter.raised_cosine(n = 512)
 
     I = demod_from_real_to_I(signal, Fcarr, Fsampl)
     Q = demod_from_real_to_Q(signal, Fcarr, Fsampl)
-    I = f.apply_filter(I)
-    Q = f.apply_filter(Q)
+    I = f.apply_real(I)
+    Q = f.apply_real(Q)
     S = numpy.vectorize(complex)(I, Q)
-    # plt.plot(S)
-    # plt.show()
-    # show_spectrum(S)
-    # S = S[512:]
+    utils.show_spectrum(S)
     S = downsample(S, K)
-    # show_spectrum(S)
+    utils.show_spectrum(S)
     data = slice_signal(S)
     return data
 
-def list_find(what, where):
-    if not what: # empty list is always found
-        return 0
-    try:
-        index = 0
-        while True:
-            index = where.index(what[0], index)
-            if where[index:index+len(what)] == what:
-                return index # found
-            index += 1 # try next position
-    except ValueError:
-        return -1 # not found
-
-def contains(what, where):
-    i = list_find(what, where)
-    return [i, i + len(what)] if i >= 0 else [] #NOTE: bool([]) == False
-
 if __name__ == '__main__':
-    x = rand_gen(1024)
+    x = utils.rand_gen(1024)
     Fcarr = 2000
     Fsampl = 8000
     K = 12
@@ -175,7 +117,10 @@ if __name__ == '__main__':
     y = demodulate(signal, Fcarr, Fsampl, K)
     x = x.tolist()
 
-    if bool(contains(x, y)) == False:
+    # print x
+    # print y
+
+    if bool(utils.contains(x, y)) == False:
         print "data error"
     else:
         print "data ok"
