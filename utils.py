@@ -11,11 +11,11 @@ def rand_gen(n, low=0, high=3):
         # x[i] = 0
     return x
 
-def show_spectrum(signal):
+def show_spectrum(signal, Fsample = 8000):
     Pxx, freqs, t, plot = pylab.specgram(
         signal,
         NFFT=128, 
-        Fs=8000, 
+        Fs = Fsample, 
         detrend=pylab.detrend_none,
         window=pylab.window_hanning,
         noverlap=int(128 * 0.5))

@@ -5,6 +5,7 @@ import numpy
 import pylab
 import filter
 import utils
+import operator
 
 class mapper_qam4:
     def __init__(self):
@@ -46,7 +47,8 @@ def upsample(x, k):
     for a in x:
         out.append(a)
         for i in range(k-1):
-            out.append(a)
+            # out.append(a)
+            out.append(0)
     return out
 
 def downsample(x ,k):
@@ -83,11 +85,12 @@ def demod_from_real_to_Q(signal, Fc, Fs):
 
 def modulate(x, Fcarr, Fsampl, K):
     qam = mapper_qam4()
-    f = filter.raised_cosine(n = 512)
+    # f = filter.raised_cosine(n=256)
+    f = filter.low_pass(Fcutt = Fsampl/K)
     signal = qam.map_array(x)
-    utils.show_spectrum(signal)
+    # utils.show_spectrum(signal)
     signal = upsample(signal, K)
-    utils.show_spectrum(signal)
+    # utils.show_spectrum(signal)
     signal = f.apply_complex(signal)
     utils.show_spectrum(signal)
     signal = modulate_to_real(signal, Fcarr, Fsampl)
@@ -95,16 +98,16 @@ def modulate(x, Fcarr, Fsampl, K):
     return signal
 
 def demodulate(signal, Fcarr, Fsampl, K):
-    f = filter.raised_cosine(n = 512)
-
+    # f = filter.raised_cosine(n=256)
+    f = filter.low_pass(Fcutt = Fsampl/K)
     I = demod_from_real_to_I(signal, Fcarr, Fsampl)
     Q = demod_from_real_to_Q(signal, Fcarr, Fsampl)
     I = f.apply_real(I)
     Q = f.apply_real(Q)
     S = numpy.vectorize(complex)(I, Q)
-    utils.show_spectrum(S)
+    # utils.show_spectrum(S)
     S = downsample(S, K)
-    utils.show_spectrum(S)
+    # utils.show_spectrum(S)
     data = slice_signal(S)
     return data
 
@@ -112,15 +115,19 @@ if __name__ == '__main__':
     x = utils.rand_gen(1024)
     Fcarr = 2000
     Fsampl = 8000
-    K = 12
+    K = 4
     signal = modulate(x, Fcarr, Fsampl, K)
+    print len(signal)
     y = demodulate(signal, Fcarr, Fsampl, K)
     x = x.tolist()
 
-    # print x
-    # print y
+    print x
+    print y
 
-    if bool(utils.contains(x, y)) == False:
+    print len(x)
+    print len(y)
+
+    if bool(utils.contains(x[0:196], y)) == False:
         print "data error"
     else:
         print "data ok"
