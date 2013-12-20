@@ -3,6 +3,7 @@ import matplotlib.pyplot as ply
 import random
 import numpy
 import pylab
+import struct
 
 def rand_gen(n, low=0, high=3):
     x = numpy.zeros(n/2, dtype = 'uint8')
@@ -38,4 +39,25 @@ def list_find(what, where):
 def contains(what, where):
     i = list_find(what, where)
     return [i, i + len(what)] if i >= 0 else [] #NOTE: bool([]) == False
+
+def conv_to_audio(signal):
+    '''We use L16_SE format!'''
+    fmt = "<%dh" % len(signal)
+    const = 0x4000
+    data = [numpy.int16(const * x) for x in signal]
+    out = struct.pack(fmt, *data)
+    return out
+
+def conv_from_audio(signal, n):
+    '''We use L16_SE format!'''
+    fmt = "<%dh" % n
+    const = 0x4000
+    data = [numpy.int16(float(x) / const) for x in signal]
+    out = list(struct.unpack(fmt, data))
+    return out
+
+def chunk(l, n):
+    for i in xrange(0, len(l), n):
+        yield l[i:i+n]
+
 

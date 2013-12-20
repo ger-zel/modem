@@ -85,21 +85,21 @@ def demod_from_real_to_Q(signal, Fc, Fs):
 
 def modulate(x, Fcarr, Fsampl, K):
     qam = mapper_qam4()
-    # f = filter.raised_cosine(n=K)
-    f = filter.low_pass(Fcutt = Fsampl/K)
+    f = filter.raised_cosine(n=K)
+    # f = filter.low_pass(Fcutt = Fsampl/K)
     signal = qam.map_array(x)
-    utils.show_spectrum(signal)
+    # utils.show_spectrum(signal)
     signal = upsample(signal, K)
-    utils.show_spectrum(signal)
+    # utils.show_spectrum(signal)
     signal = f.apply_complex(signal)
-    utils.show_spectrum(signal)
+    # utils.show_spectrum(signal)
     signal = modulate_to_real(signal, Fcarr, Fsampl)
     utils.show_spectrum(signal)
     return signal
 
 def demodulate(signal, Fcarr, Fsampl, K):
-    # f = filter.raised_cosine(n=K)
-    f = filter.low_pass(Fcutt = Fsampl/K)
+    f = filter.raised_cosine(n=K)
+    # f = filter.low_pass(Fcutt = Fsampl/K)
     I = demod_from_real_to_I(signal, Fcarr, Fsampl)
     Q = demod_from_real_to_Q(signal, Fcarr, Fsampl)
     I = f.apply_real(I)
@@ -107,12 +107,19 @@ def demodulate(signal, Fcarr, Fsampl, K):
     S = numpy.vectorize(complex)(I, Q)
     utils.show_spectrum(S)
     S = downsample(S, K)
-    utils.show_spectrum(S)
+    # utils.show_spectrum(S)
     data = slice_signal(S)
     return data
 
 if __name__ == '__main__':
-    x = utils.rand_gen(1024)
+    import audiobackend
+    import Queue
+
+    size = 1024
+    
+    q_out = Queue.Queue()
+    p = audiobackend.Play(channels=1, queue=q_out)
+    x = utils.rand_gen(10240)
     Fcarr = 2000
     Fsampl = 8000
     K = 6
@@ -120,16 +127,24 @@ if __name__ == '__main__':
     y = demodulate(signal, Fcarr, Fsampl, K)
     x = x.tolist()
 
-    print len(x)
-    print len(y)
-    print x
-    print y
-
     # print len(x)
     # print len(y)
+    # print x
+    # print y
 
     if bool(utils.contains(x[0:196], y)) == False:
     # if bool(utils.contains(x, y)) == False:
         print "data error"
     else:
         print "data ok"
+
+    s = utils.conv_to_audio(signal)
+
+    p.start()
+
+    for x in utils.chunk(s,size):
+        q_out.put(x)
+        p.samples_ready()
+    p.done()
+    p.join()
+
