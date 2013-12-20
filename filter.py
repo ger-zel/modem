@@ -4,7 +4,7 @@ import scipy
 from scipy.signal import kaiserord, lfilter, firwin
 
 class raised_cosine:
-    def __init__(self, n = 16, betta = 0.5):
+    def __init__(self, n = 16, betta = 0.25):
         x = numpy.linspace(-20, 20, n)
         sinc = numpy.sinc(x)
         self.h = numpy.zeros(n)
